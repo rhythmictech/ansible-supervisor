@@ -1,0 +1,56 @@
+---
+
+- name: install supervisor
+  yum: name=supervisor state=present
+  tags: ['supervisor']
+
+- name: place supervisor config
+  template:
+    src: "etc.supervisord.conf.el{{ ansible_distribution_major_version }}.j2"
+    dest: /etc/supervisord.conf
+    mode: 0600
+    owner: root
+    group: root
+  notify: restart supervisord
+  tags: ['supervisor']
+
+- name: ensure supervisor.d directory exists
+  file:
+    path: /etc/supervisord.d
+    mode: 0700
+    owner: root
+    group: root
+    state: directory
+  when: ansible_distribution_major_version == '7'
+  tags: ['supervisor']
+
+- name: place service configs
+  template:
+    src: etc.supervisord.d.service.ini.j2
+    dest: "/etc/supervisord.d/{{ item.name }}.ini"
+    mode: 0600
+    owner: root
+    group: root
+  with_items: "{{ supervisor_services }}"
+  notify: restart supervisord
+  when: ansible_distribution_major_version == '7'
+  tags: ['supervisor']
+
+- name: ensure supervisord is running
+  service: name=supervisord state=started enabled=yes
+  tags: ['supervisor']
+
+- name: enable supervisor services
+  supervisorctl: name="{{ item.name }}" state=started
+  with_items: "{{ supervisor_services  }}"
+  tags: ['supervisor','supervisor_start']
+
+- name: allow user to manage supervisor service via sudo
+  template:
+    src: etc.sudoers.d.supervisor.j2
+    dest: /etc/sudoers.d/supervisor
+    owner: root
+    group: root
+    mode: 0640
+  when: supervisor_allow_user_restart
+  tags: ['supervisor']

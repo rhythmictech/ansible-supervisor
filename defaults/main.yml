@@ -1,0 +1,5 @@
+---
+
+supervisor_allow_user_restart: no
+
+supervisor_restart_user:

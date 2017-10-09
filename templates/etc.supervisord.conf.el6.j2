@@ -1,0 +1,31 @@
+; {{ ansible_managed }}
+[supervisord]
+http_port=/var/tmp/supervisor.sock ; (default is to run a UNIX domain socket server)
+logfile=/var/log/supervisor/supervisord.log ; (main log file;default $CWD/supervisord.log)
+logfile_maxbytes=50MB       ; (max main logfile bytes b4 rotation;default 50MB)
+logfile_backups=10          ; (num of main logfile rotation backups;default 10)
+loglevel=debug               ; (logging level;default info; others: debug,warn)
+pidfile=/var/run/supervisord.pid ; (supervisord pidfile;default supervisord.pid)
+nodaemon=false              ; (start in foreground if true;default false)
+minfds=1024                 ; (min. avail startup file descriptors;default 1024)
+minprocs=200                ; (min. avail process descriptors;default 200)
+
+
+[supervisorctl]
+serverurl=unix:///var/tmp/supervisor.sock ; use a unix:// URL  for a unix socket
+
+{% for item in supervisor_services|default([]) %}
+{% if env in item.envs|default(['prod','ops','test','dev']) %}
+[program:{{ item.name }}]
+command={{ item.command }}
+user={{ item.run_as_user }}
+autostart=true
+autorestart=true
+log_stdout={{ item.log_stdout|default(false) }}
+log_stderr=true
+logfile=/var/log/supervisor-{{item.name}}.log
+logfile_maxbytes=1MB
+logfile_backups=10
+
+{% endif %}
+{% endfor %}
